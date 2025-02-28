@@ -44,7 +44,7 @@ export type IBookPageProps = {
 export type PortraitBookInstance = { turnPage: (index: 1 | -1) => void };
 
 const timingConfig: WithTimingConfig = {
-    duration: 800,
+    duration: 300,
     easing: Easing.inOut(Easing.cubic),
 };
 
@@ -186,9 +186,9 @@ const BookPagePortrait = React.forwardRef<PortraitBookInstance, IBookPageProps>(
                     const progress =
                         Math.abs(rotateYAsDeg.value - degrees) / 100;
                     const duration = clamp(
-                        800 * progress - Math.abs(0.1 * event.velocityX),
-                        350,
-                        1000
+                        600 * progress - Math.abs(0.1 * event.velocityX),
+                        300,
+                        450
                     );
                     rotateYAsDeg.value = withTiming(
                         degrees,
@@ -307,7 +307,6 @@ const IPage: React.FC<IPageProps> = ({
     useEffect(() => {
         // hack fix
         setTimeout(() => {
-            console.log(`CESHI DIAMA`);
             setLoaded(true);
         }, 50);
     }, []);
