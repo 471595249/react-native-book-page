@@ -307,6 +307,7 @@ const IPage: React.FC<IPageProps> = ({
     useEffect(() => {
         // hack fix
         setTimeout(() => {
+            console.log(`CESHI DIAMA`);
             setLoaded(true);
         }, 50);
     }, []);
