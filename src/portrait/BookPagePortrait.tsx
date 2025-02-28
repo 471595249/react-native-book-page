@@ -49,238 +49,239 @@ const timingConfig: WithTimingConfig = {
 };
 
 const BookPagePortrait = React.forwardRef<PortraitBookInstance, IBookPageProps>(
-    (
-        {
-            current,
-            prev,
-            onPageFlip,
-            containerSize,
-            enabled,
-            isPressable,
-            setIsAnimating,
-            getPageStyle,
-            isAnimating,
-            isAnimatingRef,
-            next,
-            onFlipStart,
-            onPageDrag,
-            onPageDragEnd,
-            onPageDragStart,
-            renderPage,
+  (
+    {
+        current,
+        prev,
+        onPageFlip,
+        containerSize,
+        enabled,
+        isPressable,
+        setIsAnimating,
+        getPageStyle,
+        isAnimating,
+        isAnimatingRef,
+        next,
+        onFlipStart,
+        onPageDrag,
+        onPageDragEnd,
+        onPageDragStart,
+        renderPage,
+    },
+    ref
+  ) => {
+      const containerWidth = containerSize.width;
+
+      const pSnapPoints = !prev
+        ? [-containerSize.width, 0]
+        : [-containerSize.width, 0, containerSize.width];
+
+      const x = useSharedValue(0);
+
+      const isMounted = useRef(false);
+      const rotateYAsDeg = useSharedValue(0);
+
+      // might not need this
+      // useEffect(() => {
+      //   if (!enabled) {
+      //     setIsDragging(false);
+      //   }
+      // }, [enabled]);
+      console.log(`page ${prev} ${current} ${next}`)
+      const turnPage = useCallback(
+        (id: 1 | -1) => {
+            console.log(`2343243`)
+            setIsAnimating(true);
+            if (onFlipStart && typeof onFlipStart === 'function') {
+                onFlipStart(id);
+            }
+            rotateYAsDeg.value = withTiming(
+              id < 0 ? -180 : 180,
+              timingConfig,
+              () => {
+                  runOnJS(onPageFlip)(id, false);
+              }
+            );
         },
-        ref
-    ) => {
-        const containerWidth = containerSize.width;
+        [onFlipStart, onPageFlip, rotateYAsDeg, setIsAnimating]
+      );
 
-        const pSnapPoints = !prev
-            ? [-containerSize.width, 0]
-            : [-containerSize.width, 0, containerSize.width];
+      React.useImperativeHandle(
+        ref,
+        () => ({
+            turnPage,
+        }),
+        [turnPage]
+      );
 
-        const x = useSharedValue(0);
+      useEffect(() => {
+          isMounted.current = true;
+          return () => {
+              isMounted.current = false;
+          };
+      }, []);
 
-        const isMounted = useRef(false);
-        const rotateYAsDeg = useSharedValue(0);
+      const getDegreesForX = (x: number) => {
+          'worklet';
 
-        // might not need this
-        // useEffect(() => {
-        //   if (!enabled) {
-        //     setIsDragging(false);
-        //   }
-        // }, [enabled]);
+          const val = interpolate(
+            x,
+            [-containerSize.width, 0, containerSize.width],
+            [180, 0, -180],
+            Extrapolate.CLAMP
+          );
+          return val;
+      };
 
-        const turnPage = useCallback(
-            (id: 1 | -1) => {
-                setIsAnimating(true);
-                if (onFlipStart && typeof onFlipStart === 'function') {
-                    onFlipStart(id);
-                }
-                rotateYAsDeg.value = withTiming(
-                    id < 0 ? -180 : 180,
-                    timingConfig,
+      const containerStyle = useAnimatedStyle(() => {
+          return {
+              flex: 1,
+          };
+      });
+
+      const onPanGestureHandler = useAnimatedGestureHandler<
+        PanGestureHandlerGestureEvent,
+        { x: number }
+        >({
+          // @ts-ignore
+          onStart: (event, ctx) => {
+              ctx.x = x.value;
+              if (onPageDragStart && typeof onPageDragStart === 'function') {
+                  runOnJS(onPageDragStart)();
+              }
+          },
+          onActive: (event, ctx) => {
+              const newX = ctx.x + event.translationX;
+              const degrees = getDegreesForX(newX);
+              x.value = newX;
+              rotateYAsDeg.value = degrees;
+              if (onPageDrag && typeof onPageDrag === 'function') {
+                  runOnJS(onPageDrag)();
+              }
+          },
+          onEnd: (event) => {
+              if (onPageDragEnd && typeof onPageDragEnd === 'function') {
+                  runOnJS(onPageDragEnd)();
+              }
+
+              const snapTo = snapPoint(x.value, event.velocityX, pSnapPoints);
+              const id = snapTo > 0 ? -1 : snapTo < 0 ? 1 : 0;
+
+              if (!next && id > 0) {
+                  // reset
+                  x.value = withTiming(0);
+                  rotateYAsDeg.value = withTiming(0);
+                  // runOnJS(onDrag)(false);
+                  return;
+              }
+
+              const degrees = getDegreesForX(snapTo);
+              x.value = snapTo;
+              if (rotateYAsDeg.value === degrees) {
+                  // already same value
+                  // debugValue('already there');
+                  runOnJS(onPageFlip)(id, false);
+              } else {
+                  runOnJS(setIsAnimating)(true);
+
+                  const progress =
+                    Math.abs(rotateYAsDeg.value - degrees) / 100;
+                  const duration = clamp(
+                    600 * progress - Math.abs(0.1 * event.velocityX),
+                    300,
+                    450
+                  );
+                  rotateYAsDeg.value = withTiming(
+                    degrees,
+                    {
+                        ...timingConfig,
+                        duration: duration,
+                    },
                     () => {
+                        if (snapTo === 0) {
+                            //
+                        }
                         runOnJS(onPageFlip)(id, false);
                     }
-                );
-            },
-            [onFlipStart, onPageFlip, rotateYAsDeg, setIsAnimating]
-        );
+                  );
+              }
+          },
+      });
 
-        React.useImperativeHandle(
-            ref,
-            () => ({
-                turnPage,
-            }),
-            [turnPage]
-        );
+      const gesturesEnabled = enabled && !isAnimating;
 
-        useEffect(() => {
-            isMounted.current = true;
-            return () => {
-                isMounted.current = false;
-            };
-        }, []);
+      const iPageProps = {
+          containerSize,
+          containerWidth,
+          getPageStyle,
+          rotateYAsDeg,
+          renderPage,
+      };
 
-        const getDegreesForX = (x: number) => {
-            'worklet';
-
-            const val = interpolate(
-                x,
-                [-containerSize.width, 0, containerSize.width],
-                [180, 0, -180],
-                Extrapolate.CLAMP
-            );
-            return val;
-        };
-
-        const containerStyle = useAnimatedStyle(() => {
-            return {
-                flex: 1,
-            };
-        });
-
-        const onPanGestureHandler = useAnimatedGestureHandler<
-            PanGestureHandlerGestureEvent,
-            { x: number }
-        >({
-            // @ts-ignore
-            onStart: (event, ctx) => {
-                ctx.x = x.value;
-                if (onPageDragStart && typeof onPageDragStart === 'function') {
-                    runOnJS(onPageDragStart)();
-                }
-            },
-            onActive: (event, ctx) => {
-                const newX = ctx.x + event.translationX;
-                const degrees = getDegreesForX(newX);
-                x.value = newX;
-                rotateYAsDeg.value = degrees;
-                if (onPageDrag && typeof onPageDrag === 'function') {
-                    runOnJS(onPageDrag)();
-                }
-            },
-            onEnd: (event) => {
-                if (onPageDragEnd && typeof onPageDragEnd === 'function') {
-                    runOnJS(onPageDragEnd)();
-                }
-
-                const snapTo = snapPoint(x.value, event.velocityX, pSnapPoints);
-                const id = snapTo > 0 ? -1 : snapTo < 0 ? 1 : 0;
-
-                if (!next && id > 0) {
-                    // reset
-                    x.value = withTiming(0);
-                    rotateYAsDeg.value = withTiming(0);
-                    // runOnJS(onDrag)(false);
-                    return;
-                }
-
-                const degrees = getDegreesForX(snapTo);
-                x.value = snapTo;
-                if (rotateYAsDeg.value === degrees) {
-                    // already same value
-                    // debugValue('already there');
-                    runOnJS(onPageFlip)(id, false);
-                } else {
-                    runOnJS(setIsAnimating)(true);
-
-                    const progress =
-                        Math.abs(rotateYAsDeg.value - degrees) / 100;
-                    const duration = clamp(
-                        600 * progress - Math.abs(0.1 * event.velocityX),
-                        300,
-                        450
-                    );
-                    rotateYAsDeg.value = withTiming(
-                        degrees,
-                        {
-                            ...timingConfig,
-                            duration: duration,
-                        },
-                        () => {
-                            if (snapTo === 0) {
-                                //
-                            }
-                            runOnJS(onPageFlip)(id, false);
-                        }
-                    );
-                }
-            },
-        });
-
-        const gesturesEnabled = enabled && !isAnimating;
-
-        const iPageProps = {
-            containerSize,
-            containerWidth,
-            getPageStyle,
-            rotateYAsDeg,
-            renderPage,
-        };
-
-        return (
-            <Animated.View style={containerStyle}>
-                <PanGestureHandler
-                    onGestureEvent={onPanGestureHandler}
-                    enabled={gesturesEnabled}
-                >
-                    <Animated.View style={containerStyle}>
-                        {isPressable && prev && (
-                            <Pressable
-                                disabled={isAnimating}
-                                onPress={() => {
-                                    if (!isAnimatingRef.current) turnPage(-1);
-                                }}
-                                style={{
-                                    position: 'absolute',
-                                    height: '100%',
-                                    width: '25%',
-                                    zIndex: 10000,
-                                    left: 0,
-                                    // backgroundColor: 'red',
-                                    // opacity: 0.2,
-                                }}
-                            />
-                        )}
-                        {isPressable && next && (
-                            <Pressable
-                                disabled={isAnimating}
-                                onPress={() => {
-                                    if (!isAnimatingRef.current) turnPage(1);
-                                }}
-                                style={{
-                                    position: 'absolute',
-                                    height: '100%',
-                                    width: '30%',
-                                    zIndex: 10000,
-                                    right: 0,
-                                    // backgroundColor: 'blue',
-                                    // opacity: 0.2,
-                                }}
-                            />
-                        )}
-                        {current && next ? (
-                            <IPage
-                                page={current}
-                                right={true}
-                                {...iPageProps}
-                            />
-                        ) : (
-                            <View style={{ height: '100%', width: '100%' }}>
-                                {renderPage && (
-                                    <View style={getPageStyle(true, true)}>
-                                        {renderPage(current.right)}
-                                    </View>
-                                )}
+      return (
+        <Animated.View style={containerStyle}>
+            <PanGestureHandler
+              onGestureEvent={onPanGestureHandler}
+              enabled={gesturesEnabled}
+            >
+                <Animated.View style={containerStyle}>
+                    {isPressable && prev && (
+                      <Pressable
+                        disabled={isAnimating}
+                        onPress={() => {
+                            if (!isAnimatingRef.current) turnPage(-1);
+                        }}
+                        style={{
+                            position: 'absolute',
+                            height: '100%',
+                            width: '25%',
+                            zIndex: 10000,
+                            left: 0,
+                            // backgroundColor: 'red',
+                            // opacity: 0.2,
+                        }}
+                      />
+                    )}
+                    {isPressable && next && (
+                      <Pressable
+                        disabled={isAnimating}
+                        onPress={() => {
+                            if (!isAnimatingRef.current) turnPage(1);
+                        }}
+                        style={{
+                            position: 'absolute',
+                            height: '100%',
+                            width: '30%',
+                            zIndex: 10000,
+                            right: 0,
+                            // backgroundColor: 'blue',
+                            // opacity: 0.2,
+                        }}
+                      />
+                    )}
+                    {current && next ? (
+                      <IPage
+                        page={current}
+                        right={true}
+                        {...iPageProps}
+                      />
+                    ) : (
+                      <View style={{ height: '100%', width: '100%' }}>
+                          {renderPage && (
+                            <View style={getPageStyle(true, true)}>
+                                {renderPage(current.right)}
                             </View>
-                        )}
-                        {prev && (
-                            <IPage page={prev} right={false} {...iPageProps} />
-                        )}
-                    </Animated.View>
-                </PanGestureHandler>
-            </Animated.View>
-        );
-    }
+                          )}
+                      </View>
+                    )}
+                    {prev && (
+                      <IPage page={prev} right={false} {...iPageProps} />
+                    )}
+                </Animated.View>
+            </PanGestureHandler>
+        </Animated.View>
+      );
+  }
 );
 
 type IPageProps = {
@@ -294,14 +295,14 @@ type IPageProps = {
 };
 
 const IPage: React.FC<IPageProps> = ({
-    right,
-    page,
-    rotateYAsDeg,
-    containerWidth,
-    containerSize,
-    getPageStyle,
-    renderPage,
-}) => {
+                                         right,
+                                         page,
+                                         rotateYAsDeg,
+                                         containerWidth,
+                                         containerSize,
+                                         getPageStyle,
+                                         renderPage,
+                                     }) => {
     const [loaded, setLoaded] = useState(right);
 
     useEffect(() => {
@@ -313,21 +314,21 @@ const IPage: React.FC<IPageProps> = ({
 
     const rotationVal = useDerivedValue(() => {
         const val = right
-            ? rotateYAsDeg.value
-            : interpolate(rotateYAsDeg.value, [-180, 0], [0, 180]);
+          ? rotateYAsDeg.value
+          : interpolate(rotateYAsDeg.value, [-180, 0], [0, 180]);
         return val;
     });
 
     const portraitBackStyle = useAnimatedStyle(() => {
         const x = interpolate(
-            rotationVal.value,
-            [0, 180],
-            [containerWidth, -containerWidth / 2]
+          rotationVal.value,
+          [0, 180],
+          [containerWidth, -containerWidth / 2]
         );
         const w = interpolate(
-            rotationVal.value,
-            [0, 180],
-            [0, containerWidth / 2]
+          rotationVal.value,
+          [0, 180],
+          [0, containerWidth / 2]
         );
 
         return {
@@ -340,10 +341,10 @@ const IPage: React.FC<IPageProps> = ({
 
     const portraitFrontStyle = useAnimatedStyle(() => {
         const w = interpolate(
-            rotationVal.value,
-            [0, 160],
-            [containerWidth, -20],
-            Extrapolate.CLAMP
+          rotationVal.value,
+          [0, 160],
+          [containerWidth, -20],
+          Extrapolate.CLAMP
         );
 
         const style: ViewStyle = {
@@ -376,52 +377,52 @@ const IPage: React.FC<IPageProps> = ({
     };
 
     return (
-        <View
-            style={{
-                ...StyleSheet.absoluteFillObject,
-                zIndex: !right ? 5 : 0,
-            }}
-        >
-            {/* BACK */}
-            <Animated.View
-                style={[
-                    styles.pageContainer,
-                    portraitBackStyle,
-                    { overflow: 'visible' },
-                ]}
-            >
-                <View style={styles.pageContainer}>
-                    {renderPage && (
-                        <Animated.View
-                            style={[
-                                backPageStyle,
+      <View
+        style={{
+            ...StyleSheet.absoluteFillObject,
+            zIndex: !right ? 5 : 0,
+        }}
+      >
+          {/* BACK */}
+          <Animated.View
+            style={[
+                styles.pageContainer,
+                portraitBackStyle,
+                { overflow: 'visible' },
+            ]}
+          >
+              <View style={styles.pageContainer}>
+                  {renderPage && (
+                    <Animated.View
+                      style={[
+                          backPageStyle,
 
-                                {
-                                    opacity: 0.2,
-                                    transform: [
-                                        { rotateX: '180deg' },
-                                        { rotateZ: '180deg' },
-                                    ],
-                                },
-                            ]}
-                        >
-                            {renderPage(page.left)}
-                        </Animated.View>
-                    )}
-                </View>
-                <BackShadow {...{ degrees: rotationVal, right: true }} />
-                <FrontShadow {...shadowProps} />
-                <PageShadow {...shadowProps} containerSize={containerSize} />
-            </Animated.View>
-            {/* FRONT */}
-            <Animated.View style={[styles.pageContainer, portraitFrontStyle]}>
-                {renderPage && (
-                    <Animated.View style={[frontPageStyle]}>
+                          {
+                              opacity: 0.2,
+                              transform: [
+                                  { rotateX: '180deg' },
+                                  { rotateZ: '180deg' },
+                              ],
+                          },
+                      ]}
+                    >
                         {renderPage(page.left)}
                     </Animated.View>
-                )}
-            </Animated.View>
-        </View>
+                  )}
+              </View>
+              <BackShadow {...{ degrees: rotationVal, right: true }} />
+              <FrontShadow {...shadowProps} />
+              <PageShadow {...shadowProps} containerSize={containerSize} />
+          </Animated.View>
+          {/* FRONT */}
+          <Animated.View style={[styles.pageContainer, portraitFrontStyle]}>
+              {renderPage && (
+                <Animated.View style={[frontPageStyle]}>
+                    {renderPage(page.left)}
+                </Animated.View>
+              )}
+          </Animated.View>
+      </View>
     );
 };
 
