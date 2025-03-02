@@ -12,6 +12,7 @@ type PageShadowProps = {
   viewHeight: number;
   right: boolean;
   containerSize: Size;
+  colors: string[];
 };
 
 const PageShadow: React.FC<PageShadowProps> = ({
@@ -19,20 +20,22 @@ const PageShadow: React.FC<PageShadowProps> = ({
                                                  viewHeight,
                                                  right,
                                                  containerSize,
+                                                 colors,
                                                }) => {
-  const colors = right
-    ? [
-      'rgba(100,0,0,0.0)',
-      'rgba(100,0,0,0.0)',
-      'rgba(100,0,0,0.2)',
-      'rgba(100,0,0,0.6)',
-    ]
-    : [
-      'rgba(0,100,0,0.6)',
-      'rgba(0,100,0,0.2)',
-      'rgba(0,100,0,0.0)',
-      'rgba(0,100,0,0)',
-    ];
+    const defaultColors = right
+        ? [
+            'rgba(100,0,0,0.0)',
+            'rgba(100,0,0,0.0)',
+            'rgba(100,0,0,0.2)',
+            'rgba(100,0,0,0.6)',
+        ]
+        : [
+            'rgba(0,100,0,0.6)',
+            'rgba(0,100,0,0.2)',
+            'rgba(0,100,0,0.0)',
+            'rgba(0,100,0,0)',
+        ];
+    const colorsValue = colors ? colors : defaultColors;
   const shadowWidth = containerSize.width * 0.02;
   const animatedStyle = useAnimatedStyle(() => {
     const opacity = interpolate(
@@ -61,7 +64,7 @@ const PageShadow: React.FC<PageShadowProps> = ({
       <Gradient
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
-        colors={colors}
+        colors={colorsValue}
         style={{
           flex: 1,
         }}

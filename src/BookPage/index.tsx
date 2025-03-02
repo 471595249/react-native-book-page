@@ -15,7 +15,7 @@ import Animated, {
     withTiming,
     WithTimingConfig,
 } from 'react-native-reanimated';
-import type { Page, Size } from '../types';
+import type { Page, Size, ShadowColors } from '../types';
 import BackShadow from './BackShadow';
 import FrontShadow from './FrontShadow';
 import PageShadow from './PageShadow';
@@ -40,6 +40,8 @@ export type IBookPageProps = {
     onPageDrag?: () => void;
     onPageDragEnd?: () => void;
     renderPage?: (data: any) => any;
+    onPressCurrent?: (data: any) => any;
+    shadowColors?: ShadowColors;
 };
 
 export type BookPageInstance = {
@@ -71,6 +73,8 @@ const BookPage = React.forwardRef<BookPageInstance, IBookPageProps>(
             onPageDragEnd,
             onPageDragStart,
             renderPage,
+            onPressCurrent,
+            shadowColors
         },
         ref
     ) => {
@@ -345,7 +349,7 @@ const BookPage = React.forwardRef<BookPageInstance, IBookPageProps>(
                             )}
                         </View>
 
-                        <BackShadow {...{ degrees: rotateYAsDeg, right }} />
+                        <BackShadow {...{ degrees: rotateYAsDeg, right }} colors={shadowColors?.back}/>
                         <FrontShadow
                             {...{
                                 right,
@@ -353,6 +357,7 @@ const BookPage = React.forwardRef<BookPageInstance, IBookPageProps>(
                                 width: containerWidth,
                                 viewHeight: containerHeight,
                             }}
+                            colors={shadowColors?.front}
                         />
 
                         <PageShadow
@@ -363,6 +368,7 @@ const BookPage = React.forwardRef<BookPageInstance, IBookPageProps>(
                                 viewHeight: containerHeight,
                                 containerSize,
                             }}
+                            colors={shadowColors?.current}
                         />
 
                         {showSpine && (

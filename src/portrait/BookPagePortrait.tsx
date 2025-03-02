@@ -16,7 +16,7 @@ import Animated, {
     withTiming,
     WithTimingConfig,
 } from 'react-native-reanimated';
-import type { Page, Size } from '../types';
+import type { Page, Size, ShadowColors } from '../types';
 import BackShadow from '../BookPage/BackShadow';
 import FrontShadow from '../BookPage/FrontShadow';
 import PageShadow from '../BookPage/PageShadow';
@@ -39,6 +39,8 @@ export type IBookPageProps = {
     onPageDrag?: () => void;
     onPageDragEnd?: () => void;
     renderPage?: (data: any) => any;
+    onPressCurrent?: (data: any) => any;
+    shadowColors?: ShadowColors;
 };
 
 export type PortraitBookInstance = { turnPage: (index: 1 | -1) => void };
@@ -67,9 +69,12 @@ const BookPagePortrait = React.forwardRef<PortraitBookInstance, IBookPageProps>(
         onPageDragEnd,
         onPageDragStart,
         renderPage,
+        onPressCurrent,
+        shadowColors,
     },
     ref
   ) => {
+
       const containerWidth = containerSize.width;
 
       const pSnapPoints = !prev
@@ -87,10 +92,8 @@ const BookPagePortrait = React.forwardRef<PortraitBookInstance, IBookPageProps>(
       //     setIsDragging(false);
       //   }
       // }, [enabled]);
-      console.log(`page ${prev} ${current} ${next}`)
       const turnPage = useCallback(
         (id: 1 | -1) => {
-            console.log(`2343243`)
             setIsAnimating(true);
             if (onFlipStart && typeof onFlipStart === 'function') {
                 onFlipStart(id);
@@ -217,7 +220,6 @@ const BookPagePortrait = React.forwardRef<PortraitBookInstance, IBookPageProps>(
           rotateYAsDeg,
           renderPage,
       };
-
       return (
         <Animated.View style={containerStyle}>
             <PanGestureHandler
@@ -234,7 +236,7 @@ const BookPagePortrait = React.forwardRef<PortraitBookInstance, IBookPageProps>(
                         style={{
                             position: 'absolute',
                             height: '100%',
-                            width: '25%',
+                            width: '30%',
                             zIndex: 10000,
                             left: 0,
                             // backgroundColor: 'red',
@@ -259,10 +261,28 @@ const BookPagePortrait = React.forwardRef<PortraitBookInstance, IBookPageProps>(
                         }}
                       />
                     )}
+                    {isPressable && current && (
+                        <Pressable
+                            disabled={isAnimating}
+                            onPress={() => {
+                                onPressCurrent();
+                            }}
+                            style={{
+                                position: 'absolute',
+                                height: '100%',
+                                width: '40%',
+                                zIndex: 10000,
+                                left: '30%',
+                                // backgroundColor: 'orange',
+                                // opacity: 0.2,
+                            }}
+                        />
+                    )}
                     {current && next ? (
                       <IPage
                         page={current}
                         right={true}
+                        shadowColors={shadowColors}
                         {...iPageProps}
                       />
                     ) : (
@@ -275,7 +295,7 @@ const BookPagePortrait = React.forwardRef<PortraitBookInstance, IBookPageProps>(
                       </View>
                     )}
                     {prev && (
-                      <IPage page={prev} right={false} {...iPageProps} />
+                      <IPage page={prev} right={false} {...iPageProps}  shadowColors={shadowColors}/>
                     )}
                 </Animated.View>
             </PanGestureHandler>
@@ -292,6 +312,7 @@ type IPageProps = {
     containerSize: Size;
     getPageStyle: any;
     renderPage?: (data: any) => any;
+    shadowColors?: ShadowColors;
 };
 
 const IPage: React.FC<IPageProps> = ({
@@ -302,6 +323,7 @@ const IPage: React.FC<IPageProps> = ({
                                          containerSize,
                                          getPageStyle,
                                          renderPage,
+                                         shadowColors,
                                      }) => {
     const [loaded, setLoaded] = useState(right);
 
@@ -375,7 +397,6 @@ const IPage: React.FC<IPageProps> = ({
         width: containerSize.width,
         viewHeight: containerSize.height,
     };
-
     return (
       <View
         style={{
@@ -410,9 +431,9 @@ const IPage: React.FC<IPageProps> = ({
                     </Animated.View>
                   )}
               </View>
-              <BackShadow {...{ degrees: rotationVal, right: true }} />
-              <FrontShadow {...shadowProps} />
-              <PageShadow {...shadowProps} containerSize={containerSize} />
+              <BackShadow colors={shadowColors?.back} {...{ degrees: rotationVal, right: true }}/>
+              <FrontShadow colors={shadowColors?.front} {...shadowProps} />
+              <PageShadow colors={shadowColors?.current} {...shadowProps} containerSize={containerSize} />
           </Animated.View>
           {/* FRONT */}
           <Animated.View style={[styles.pageContainer, portraitFrontStyle]}>

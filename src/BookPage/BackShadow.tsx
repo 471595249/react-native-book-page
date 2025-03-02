@@ -7,12 +7,14 @@ import {Gradient} from '../Components/Gradient';
 type BackShadowProps = {
     degrees: Animated.SharedValue<number>;
     right: boolean;
+    colors: string[];
 };
 
-const colors = [
-    'rgba(233,150,122,0.0)',
-    'rgba(233,150,122,0.2)',
-    'rgba(233,150,122,0.7)'
+const defaultColors = [
+    'rgba(0,150,122,0.0)',
+    'rgba(0,150,122,0.2)',
+    'rgba(0,150,122,0.4)',
+    'rgba(0,150,122,0.8)'
 ];
 
 const rightPosition = {
@@ -25,7 +27,7 @@ const leftPosition = {
     end: {x: 0, y: 0},
 };
 
-const BackShadow: React.FC<BackShadowProps> = ({degrees, right}) => {
+const BackShadow: React.FC<BackShadowProps> = ({degrees, right, colors=defaultColors}) => {
     const position = right ? rightPosition : leftPosition;
 
     const animatedStyle = useAnimatedStyle(() => {
@@ -39,7 +41,6 @@ const BackShadow: React.FC<BackShadowProps> = ({degrees, right}) => {
             opacity,
         };
     });
-
     return (
       <Animated.View
         style={[

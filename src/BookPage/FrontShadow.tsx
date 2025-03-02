@@ -12,19 +12,23 @@ type FrontShadowProps = {
     degrees: Animated.SharedValue<number>;
     viewHeight: number;
     right: boolean;
+    colors: string[];
 };
+
+const defaultColors = [
+    'rgba(47,79,79,0.0)',
+    'rgba(47,79,79,0.2)',
+    'rgba(47,79,79,0.3)',
+    'rgba(47,79,79,0.6)',
+];
 
 const FrontShadow: React.FC<FrontShadowProps> = ({
                                                      degrees,
                                                      viewHeight,
                                                      right,
+                                                     colors = defaultColors,
                                                  }) => {
-    const colors = [
-        'rgba(47,79,79,0.0)',
-        'rgba(47,79,79,0.2)',
-        'rgba(47,79,79,0.3)',
-        'rgba(47,79,79,0.6)',
-    ];
+
     const shadowWidth = 40;
 
     const animatedStyle = useAnimatedStyle(() => {

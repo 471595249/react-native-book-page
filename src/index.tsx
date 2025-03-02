@@ -8,7 +8,7 @@ import {
     BookPagePortrait,
     PortraitBookInstance,
 } from './portrait/BookPagePortrait';
-import type { Page, Size } from './types';
+import type { Page, Size, ShadowColors } from './types';
 import { createPages } from './utils/utils';
 import { BookPageBackground } from './BookPageBackground';
 
@@ -28,8 +28,10 @@ export type IPageFlipperProps = {
     onInitialized?: (props: any) => void;
     renderContainer?: () => any;
     renderPage?: (data: any) => any;
+    onPressCurrent?: (data: any) => any;
     pageSize: Size;
     contentContainerStyle: ViewStyle;
+    shadowColors: ShadowColors;
 };
 
 export type PageFlipperInstance = {
@@ -77,8 +79,10 @@ const PageFlipper = React.forwardRef<PageFlipperInstance, IPageFlipperProps>(
         onInitialized,
         renderContainer,
         renderPage,
+        onPressCurrent,
         pageSize = { height: 600, width: 400 },
         contentContainerStyle,
+        shadowColors,
     },
     ref
   ) => {
@@ -317,7 +321,6 @@ const PageFlipper = React.forwardRef<PageFlipperInstance, IPageFlipperProps>(
               state.nextPageIndex !== undefined
                 ? state.nextPageIndex
                 : state.pageIndex + index;
-            console.log(`onPageFlipped ${newIndex} `)
             if (newIndex < 0 || newIndex > state.pages.length - 1) {
                 // this if condition theoretically should never occur in the first place, so it could be removed but it's here just in case
                 logger('invalid page');
@@ -457,10 +460,10 @@ const PageFlipper = React.forwardRef<PageFlipperInstance, IPageFlipperProps>(
             onPageDragStart,
             isPressable: pressable,
             renderPage,
+            onPressCurrent,
+            shadowColors,
         };
-
       const ContentWrapper = renderContainer ? renderContainer : Wrapper;
-
       return (
         <View style={styles.container} onLayout={onLayout}>
             <View
