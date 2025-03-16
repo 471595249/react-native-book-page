@@ -288,7 +288,7 @@ const BookPagePortrait = React.forwardRef<PortraitBookInstance, IBookPageProps>(
                     ) : (
                       <View style={{ height: '100%', width: '100%' }}>
                           {renderPage && (
-                            <View style={getPageStyle(true, true)}>
+                            <View style={[getPageStyle(true, true)]}>
                                 {renderPage(current.right)}
                             </View>
                           )}
@@ -413,6 +413,7 @@ const IPage: React.FC<IPageProps> = ({
             ]}
           >
               <View style={styles.pageContainer}>
+                  {/*翻转的view， 复制自当前页、上一页*/}
                   {renderPage && (
                     <Animated.View
                       style={[
@@ -438,7 +439,7 @@ const IPage: React.FC<IPageProps> = ({
           {/* FRONT */}
           <Animated.View style={[styles.pageContainer, portraitFrontStyle]}>
               {renderPage && (
-                <Animated.View style={[frontPageStyle]}>
+                <Animated.View style={[frontPageStyle, {backgroundColor: 'orange'}]}>
                     {renderPage(page.left)}
                 </Animated.View>
               )}

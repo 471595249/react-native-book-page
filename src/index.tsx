@@ -1,6 +1,6 @@
 import usePrevious from './hooks/usePrevious';
 import useSetState from './hooks/useSetState';
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, {useEffect, useState, useCallback, useMemo, useImperativeHandle} from 'react';
 import { useRef } from 'react';
 import { LayoutChangeEvent, StyleSheet, View, ViewStyle } from 'react-native';
 import { BookPage, BookPageInstance, IBookPageProps } from './BookPage';
@@ -24,6 +24,7 @@ export type IPageFlipperProps = {
     onPageDragStart?: () => void;
     onPageDrag?: () => void;
     onPageDragEnd?: () => void;
+    onStartReached?: () => void;
     onEndReached?: () => void;
     onInitialized?: (props: any) => void;
     renderContainer?: () => any;
@@ -75,6 +76,7 @@ const PageFlipper = React.forwardRef<PageFlipperInstance, IPageFlipperProps>(
         onPageDrag,
         onPageDragEnd,
         onPageDragStart,
+        onStartReached,
         onEndReached,
         onInitialized,
         renderContainer,
@@ -232,6 +234,7 @@ const PageFlipper = React.forwardRef<PageFlipperInstance, IPageFlipperProps>(
                 return;
             }
 
+            console.log(`state.pages ${index} ${JSON.stringify(state.pages)}`)
             if (index < 0 || index > state.pages.length - 1) {
                 logger('invalid page');
                 return;
@@ -272,14 +275,40 @@ const PageFlipper = React.forwardRef<PageFlipperInstance, IPageFlipperProps>(
           goToPage(newIndex);
       }, [goToPage, state.pageIndex]);
 
+      const refreshData = useCallback((data: any, index: number) => {
+          // console.log(`refresh params ${index} ${JSON.stringify(data)}`)
+          console.log(`refresh params ${index} ${JSON.stringify(data)}`)
+          try {
+              const allPages = createPages({
+                  portrait,
+                  singleImageMode,
+                  data,
+              });
+              let adjustedIndex = index ?? (state.pageIndex > data.length - 1 ? data.length - 1 : state.pageIndex);
+              console.log(`adjustedIndex ${adjustedIndex} ${state.pageIndex}`)
+              setState({
+                  initialized: true,
+                  pages: allPages,
+                  prev: allPages[adjustedIndex - 1],
+                  current: allPages[adjustedIndex],
+                  next: allPages[adjustedIndex + 1],
+                  pageIndex: adjustedIndex,
+                  isPortrait: portrait,
+              });
+          } catch (error) {
+              console.error('error', error);
+          }
+      }, [setState, state.pageIndex])
+
       React.useImperativeHandle(
         ref,
         () => ({
             goToPage,
             nextPage,
             previousPage,
+            refreshData,
         }),
-        [goToPage, nextPage, previousPage]
+        [goToPage, nextPage, previousPage, refreshData]
       );
 
       const getAdjustedIndex = (allPages: any[]) => {
@@ -346,14 +375,19 @@ const PageFlipper = React.forwardRef<PageFlipperInstance, IPageFlipperProps>(
             });
             isAnimatingRef.current = false;
             if (onFlippedEnd && typeof onFlippedEnd === 'function') {
-                onFlippedEnd(newIndex);
+                onFlippedEnd(newIndex, current);
             }
 
+            console.log(`newIndex ${newIndex}`)
             if (newIndex === state.pages.length - 1 && onEndReached) {
                 onEndReached();
             }
+            if (newIndex === 0 && onStartReached) {
+                onStartReached();
+            }
         },
         [
+            onStartReached,
             onEndReached,
             onFlippedEnd,
             setState,
@@ -464,6 +498,8 @@ const PageFlipper = React.forwardRef<PageFlipperInstance, IPageFlipperProps>(
             shadowColors,
         };
       const ContentWrapper = renderContainer ? renderContainer : Wrapper;
+
+      // console.log(`current ${JSON.stringify(current)}`)
       return (
         <View style={styles.container} onLayout={onLayout}>
             <View
@@ -538,6 +574,7 @@ const PageFlipper = React.forwardRef<PageFlipperInstance, IPageFlipperProps>(
                                   overflow: 'hidden',
                               }}
                             >
+                                {/*下一页的内容*/}
                                 {renderPage && (
                                   <View
                                     style={getPageStyle(
